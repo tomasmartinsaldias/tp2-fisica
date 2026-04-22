@@ -3,10 +3,10 @@ GRAVEDAD = 9.81
 PESO = GRAVEDAD * MASA
 ROZAMIENTO = 0.1
 ALTURA_OBJETIVO = 100
-ACELERACION_INICIAL = (PESO + 1)/MASA
 DELTA_T= 0.001
 ENERGIA_MAX = 25000
 POTENCIA_MAXIMA = 2500
+F_MAX_ESTATICO = 400 #El limite que alcanza el motor, sacado del ejercicio 3
 
 def actualizar_fuerza_rozamiento(velocidad):
     return ROZAMIENTO * velocidad**2
@@ -21,11 +21,12 @@ def actualizar_posicion():
     velocidad_actual = 0
     velocidad = 0
     energia = 0
-    fuerza_dron = ACELERACION_INICIAL * MASA
         
     while posicion_actual < ALTURA_OBJETIVO:
         if velocidad != 0:
-            fuerza_dron = min(fuerza_dron, POTENCIA_MAXIMA / velocidad)
+            fuerza_dron = min(F_MAX_ESTATICO, POTENCIA_MAXIMA / velocidad)
+        else:
+            fuerza_dron = F_MAX_ESTATICO
         
         fuerza_rozamiento = actualizar_fuerza_rozamiento(velocidad)
         aceleracion_actual = (fuerza_dron - PESO - fuerza_rozamiento)/MASA
@@ -38,7 +39,10 @@ def actualizar_posicion():
         tiempo_actual += DELTA_T
 
     fuerza_total = fuerza_total_f(fuerza_dron, fuerza_rozamiento)
-    print(ACELERACION_INICIAL)
-    print(f"Posición: {posicion}, \nVelocidad: {velocidad},\nAceleración final: {aceleracion_actual},\nTiempo: {tiempo_actual}, \nFuerza total: {fuerza_total}, \nFuerza rozamiento: {fuerza_rozamiento}")
+    print(f"Posición: {posicion}, \nVelocidad: {velocidad},\nAceleración final: {aceleracion_actual},\nTiempo: {tiempo_actual}, \nFuerza total: {fuerza_total}, \nEnergía acumulada: {energia}")
+    if energia < ENERGIA_MAX:
+        print("Se cumple con la restricción de energía")
+    else:
+        print("El plan de vuelo no cumple con la restricción de energía")
 
 actualizar_posicion()
