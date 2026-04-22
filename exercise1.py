@@ -1,34 +1,44 @@
-x= 0
-x_i = 0
-t = 0
-dt= 0.001
-v_i = 0
-v = 0
 MASA = 15
-ACELERACION_INICIAL = 2
 GRAVEDAD = 9.81
 PESO = GRAVEDAD * MASA
 ROZAMIENTO = 0.1
-pot_max = 2500
-work_max = 25000
+ALTURA_OBJETIVO = 100
+ACELERACION_INICIAL = (PESO + 1)/MASA
+DELTA_T= 0.001
+ENERGIA_MAX = 25000
+POTENCIA_MAXIMA = 2500
 
-y_obj = 100
-y_i = 0
+def actualizar_fuerza_rozamiento(velocidad):
+    return ROZAMIENTO * velocidad**2
 
+def fuerza_total_f(fuerza_dron, fuerza_rozamiento):
+    return fuerza_dron - PESO - fuerza_rozamiento
 
-while x_i < y_obj:
+def actualizar_posicion():
+    posicion = 0
+    posicion_actual = 0
+    tiempo_actual = 0
+    velocidad_actual = 0
+    velocidad = 0
+    energia = 0
     fuerza_dron = ACELERACION_INICIAL * MASA
-    if v != 0:
-        fuerza_dron = min(fuerza_dron, pot_max / v)
-    
-    fuerza_rozamiento = ROZAMIENTO * v**2    
-    fuerza_total = fuerza_dron + fuerza_rozamiento + PESO
-    a_i = fuerza_dron / MASA
-    v = v_i + a_i*dt
-    x= x_i + v*dt
-    
-    print(x, v ,a_i, t, fuerza_dron, fuerza_rozamiento, fuerza_total)
-    
-    v_i = v
-    x_i = x
-    t += dt
+        
+    while posicion_actual < ALTURA_OBJETIVO:
+        if velocidad != 0:
+            fuerza_dron = min(fuerza_dron, POTENCIA_MAXIMA / velocidad)
+        
+        fuerza_rozamiento = actualizar_fuerza_rozamiento(velocidad)
+        aceleracion_actual = (fuerza_dron - PESO - fuerza_rozamiento)/MASA
+        velocidad = velocidad_actual + aceleracion_actual*DELTA_T        
+        energia += fuerza_dron * velocidad_actual * DELTA_T
+        posicion = posicion_actual + velocidad*DELTA_T
+
+        velocidad_actual = velocidad
+        posicion_actual = posicion
+        tiempo_actual += DELTA_T
+
+    fuerza_total = fuerza_total_f(fuerza_dron, fuerza_rozamiento)
+    print(ACELERACION_INICIAL)
+    print(f"Posición: {posicion}, \nVelocidad: {velocidad},\nAceleración final: {aceleracion_actual},\nTiempo: {tiempo_actual}, \nFuerza total: {fuerza_total}, \nFuerza rozamiento: {fuerza_rozamiento}")
+
+actualizar_posicion()
