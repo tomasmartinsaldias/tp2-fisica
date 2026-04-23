@@ -33,7 +33,9 @@ def trayectoria():
     tiempo_actual = 0
     distancia_al_objetivo = np.linalg.norm(DESTINO - posicion)
 
-    while distancia_al_objetivo > UMBRAL_LLEGADA:
+    trabajo_aire = 0
+
+    while distancia_al_objetivo > UMBRAL_LLEGADA and (tiempo_actual < 20) and (energia < 40000):
         # Trayectoria del Dron
         vector_trayectoria = DESTINO - posicion
         # Dirección de la fuerza del dron
@@ -51,13 +53,18 @@ def trayectoria():
 
         f_dron_vector = f_dron_magn*versor_u
         
+        # f = m*a --> a = f/m
         aceleracion = (f_dron_vector + PESO + f_viento)/MASA
+        # actualizamos velocidad
         v_dron = v_dron + aceleracion*DELTA_T
+        # actualizamos la energía acumuladq (como es una magnitud transformo el vector en magnitud haciendo el producto escalar con el versor direccion)
         energia += f_dron_magn * (v_dron@versor_u) * DELTA_T
         posicion = posicion + v_dron*DELTA_T
         tiempo_actual += DELTA_T
 
         distancia_al_objetivo = np.linalg.norm(DESTINO - posicion)
+
+        trabajo_aire += (f_viento @ v_dron) * DELTA_T
 
         # --- Guardamos los datos de cada iteración ---
         h_pos.append(posicion.copy())
@@ -67,6 +74,29 @@ def trayectoria():
         h_pot_y.append(f_dron_vector[1] * v_dron[1])
         h_f_motor.append(f_dron_magn)
         h_f_fric.append(np.linalg.norm(f_viento))
+
+    # Datos oara el balance energético
+    u_final = MASA * abs(GRAVEDAD) * (posicion[2] - ORIGEN[2])
+    k_final = 0.5 * MASA * np.linalg.norm(v_dron)**2 #Energía cinética
+    cambio_energia_mecanica = k_final + u_final
+    suma_trabajos = energia + trabajo_aire
+    error_trabajo_energia = abs(suma_trabajos - cambio_energia_mecanica)
+
+    print(f"Suma de Trabajo Dron + Aire: {suma_trabajos:.2f} J")
+    print(f"Cambio en la Energía Mecánica: {cambio_energia_mecanica:.2f} J")
+    print(f"Error numérico absoluto: {error_trabajo_energia:.4f} J")
+    print(f"Porcentaje que representa el error: {(error_trabajo_energia/((suma_trabajos+cambio_energia_mecanica)/2)*100):.3f}%")
+
+    print("--- RESULTADO DE LA MISIÓN ---")
+    if distancia_al_objetivo <= UMBRAL_LLEGADA:
+        print(f"✅ ¡ÉXITO! Destino alcanzado en {tiempo_actual:.2f} s")
+    elif tiempo_actual >= 20:
+        print(f"❌ FALLO: Tiempo límite excedido (Misión abortada a los 20 s)")
+    elif energia >= 40000:
+        print(f"❌ FALLO: Batería agotada (Consumo superó los 40,000 J)")
+
+    print(f"Distancia final al objetivo: {distancia_al_objetivo:.2f} m")
+    print(f"Energía total consumida: {energia:.2f} J")
 
     # Convertimos a arrays de numpy para graficar fácil
     h_pos = np.array(h_pos)
@@ -90,24 +120,20 @@ def trayectoria():
     plt.xlabel("Tiempo (s)"); plt.ylabel("Potencia (W)")
     plt.legend(); plt.grid(True)
 
-    # 3. Velocidades por componente
+    # 3. Fuerza del Motor vs Fricción
     plt.figure(figsize=(10, 4))
-    plt.plot(h_tiempo, h_vel[:,0], label='Vx', color='r')
-    plt.plot(h_tiempo, h_vel[:,1], label='Vy', color='g')
-    plt.plot(h_tiempo, h_vel[:,2], label='Vz', color='b')
-    plt.title("Velocidad en el tiempo")
-    plt.xlabel("Tiempo (s)"); plt.ylabel("m/s")
-    plt.legend(); plt.grid(True)
-
-    # 4. Magnitud de Fuerzas
-    plt.figure(figsize=(10, 4))
-    plt.plot(h_tiempo, h_f_motor, label='Fuerza Motor (Empuje)', color='black')
+    plt.plot(h_tiempo, h_f_motor, label='Fuerza Motor (Empuje)', color='black', linewidth=2)
     plt.plot(h_tiempo, h_f_fric, label='Fuerza Fricción (Arrastre)', color='gray', linestyle='--')
-    plt.axhline(y=F_MAX_ESTATICO, color='red', linestyle=':', label='Límite Estático')
+    
+    # Agregamos la línea horizontal roja que marca tu límite físico
+    plt.axhline(y=F_MAX_ESTATICO, color='red', linestyle=':', label='Límite Estático (400 N)')
+    
     plt.title("Fuerza del Motor vs. Fuerza de Fricción")
-    plt.xlabel("Tiempo (s)"); plt.ylabel("Fuerza (N)")
-    plt.legend(); plt.grid(True)
-
+    plt.xlabel("Tiempo (s)")
+    plt.ylabel("Fuerza (N)")
+    plt.legend()
+    plt.grid(True)
+    
     plt.show()
 
 trayectoria()
