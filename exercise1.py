@@ -38,6 +38,12 @@ def actualizar_posicion():
         posicion_actual = posicion
         tiempo_actual += DELTA_T
 
+        potencia_instantanea = fuerza_dron*velocidad
+        print(f"{potencia_instantanea}")
+        if potencia_instantanea > POTENCIA_MAXIMA+10: #un pequeño umbral
+            print("Se entregó mas potencia de la máxima")
+            return "a"
+
     fuerza_total = fuerza_total_f(fuerza_dron, fuerza_rozamiento)
     print(f"Posición: {posicion}, \nVelocidad: {velocidad},\nAceleración final: {aceleracion_actual},\nTiempo: {tiempo_actual}, \nFuerza total: {fuerza_total}, \nEnergía acumulada: {energia}")
     if energia < ENERGIA_MAX:
