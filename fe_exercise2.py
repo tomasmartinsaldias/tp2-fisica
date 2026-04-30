@@ -1,92 +1,4 @@
 import numpy as np
-
-# Constantes
-MASA  = 15
-GRAVEDAD = 9.81
-PESO = GRAVEDAD * MASA
-ROZAMIENTO = 0.15
-POTENCIA_MAX= 3000
-POSICION_INICIAL = np.array([0.0, 0.0, 0.0])
-POSICION_FINAL = np.array([80.0, 50.0, 60.0])
-VIENTO = np.array([5.0, -2.0, 0.0])
-DELTA_T = 0.01
-F_MAX_ESTATICO = 400
-
-def get_vectors_unitarios(pos_inicial, pos_final):
-    vector = np.array(pos_final) - np.array(pos_inicial)
-    distancia = np.linalg.norm(vector)
-    if distancia == 0:
-        return np.zeros_like(vector), 0
-    return vector / distancia, distancia
-
-def decompose_wind(vel_viento, vector_unitario):
-    viento_vector = vel_viento
-    projection_scalar = np.dot(viento_vector, vector_unitario)
-    projection_vector = projection_scalar * vector_unitario
-    ortogonal_wind = viento_vector - projection_vector
-    return projection_scalar, ortogonal_wind
-
-def actualizar_fuerza_rozamiento(velocidad_relativa):
-    return ROZAMIENTO * velocidad_relativa**2
-
-def get_max_speed(potencia_max, velocidad_viento, indice_rozamiento):
-    v_max = (potencia_max / indice_rozamiento)**(1/3)
-    return v_max
-
-def navegator(ortogonal_wind, vector_unitario, v_max):
-    norma_ortogonal = np.linalg.norm(ortogonal_wind)
-    if norma_ortogonal > v_max:
-        return None # Caso error
-    obj_speed = np.sqrt(v_max**2 - norma_ortogonal**2)
-    # El vector del dron compensa el viento ortogonal
-    return (vector_unitario * obj_speed) - ortogonal_wind
-
-def actualizar_posicion():
-    posicion_actual = np.copy(POSICION_INICIAL)
-    velocidad_actual = 0.0
-    tiempo_actual = 0.0
-    energia = 0.0
-    
-    unit_vector, dist_total = get_vectors_unitarios(POSICION_INICIAL, POSICION_FINAL)
-    norma_paralela, viento_ortogonal = decompose_wind(VIENTO, unit_vector)
-    v_max = get_max_speed(POTENCIA_MAX, norma_paralela, ROZAMIENTO)
-    
-    # Vector de velocidad del aire (va) que el dron mantiene
-    vector_va = navegator(viento_ortogonal, unit_vector, v_max)
-    
-    if vector_va is None:
-        return "ERROR: El viento transversal es más fuerte que el dron."
-
-    # Simulación
-    dist_restante = np.linalg.norm(POSICION_FINAL - posicion_actual)
-    
-    while dist_restante > 0.0036: # Umbral de llegada
-        if velocidad_actual != 0:
-            fuerza_dron = min(F_MAX_ESTATICO, POTENCIA_MAX / velocidad_actual)
-        else:
-            fuerza_dron = F_MAX_ESTATICO
-            
-        fuerza_rozamiento = actualizar_fuerza_rozamiento(v_max) # Basado en velocidad aire
-        
-        # Simplificación de aceleración en el eje de progreso
-        aceleracion_actual = (fuerza_dron - (fuerza_rozamiento + PESO)) / MASA
-        
-        velocidad_actual += aceleracion_actual * DELTA_T
-        # La velocidad respecto al suelo es la suma del vector aire + viento
-        v_suelo = vector_va + VIENTO
-        
-        # Actualizamos posición usando el vector de velocidad resultante
-        posicion_actual += v_suelo * DELTA_T
-        
-        energia += fuerza_dron * velocidad_actual * DELTA_T
-        tiempo_actual += DELTA_T
-        dist_restante = np.linalg.norm(POSICION_FINAL - posicion_actual)
-        
-        print(posicion_actual, dist_restante,velocidad_actual, tiempo_actual, energia)
-        
-actualizar_posicion()
-        
-import numpy as np
 import plotly.graph_objects as go
 
 # --- Constantes ---
@@ -167,9 +79,10 @@ def simular_vuelo():
             
         contador_iteraciones += 1
         
+        print(f"Iteración {contador_iteraciones}: Posición={posicion_actual}, Distancia Restante={dist_restante:.4f} m, Tiempo={contador_iteraciones*DELTA_T:.4f} s", end='\r')
     historial_posiciones.append(np.copy(posicion_actual))
     return np.array(historial_posiciones)
-
+    
 # --- PIPELINE DE ANIMACIÓN EN PLOTLY ---
 def crear_animacion_plotly(historial):
     if len(historial) == 0:
